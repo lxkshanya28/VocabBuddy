@@ -1,4 +1,4 @@
-import { CircleDashed, ThumbsUp } from 'lucide-react';
+import { CircleDashed, Lightbulb, ThumbsUp } from 'lucide-react';
 import { LessonAttempt } from '../types/vocabulary';
 
 type Props = {
@@ -16,12 +16,24 @@ export function FeedbackPanel({ feedback }: Props) {
         </div>
       )}
       {feedback && (
-        <div className={feedback.correct ? 'feedback success' : 'feedback review'}>
-          <ThumbsUp size={22} />
-          <strong>{feedback.correct ? 'Mastered' : 'Needs review'}</strong>
+        <div className={getFeedbackClass(feedback)}>
+          {feedback.correct ? <ThumbsUp size={22} /> : <Lightbulb size={22} />}
+          <strong>{getFeedbackLabel(feedback)}</strong>
           <p>{feedback.feedback}</p>
         </div>
       )}
     </div>
   );
+}
+
+function getFeedbackClass(feedback: LessonAttempt) {
+  if (feedback.correct) return 'feedback success';
+  if (feedback.outcome === 'almost') return 'feedback almost';
+  return 'feedback review';
+}
+
+function getFeedbackLabel(feedback: LessonAttempt) {
+  if (feedback.correct) return 'Mastered';
+  if (feedback.outcome === 'almost') return 'Almost there';
+  return 'Needs review';
 }

@@ -2,6 +2,7 @@ import { UpgradeSuggestion } from '../types/vocabulary';
 
 export type EvaluationResult = {
   correct: boolean;
+  outcome: 'mastered' | 'almost' | 'review';
   feedback: string;
 };
 
@@ -15,13 +16,15 @@ export function evaluateSentence(sentence: string, suggestion: UpgradeSuggestion
   if (!usedTarget) {
     return {
       correct: false,
+      outcome: 'review',
       feedback: `Try reusing "${suggestion.selectedWord}" in a sentence connected to your own example.`,
     };
   }
 
-  if (wordCount < 5) {
+  if (wordCount < 2) {
     return {
       correct: false,
+      outcome: 'review',
       feedback: `Good start using "${suggestion.selectedWord}". Try a fuller sentence with a little context.`,
     };
   }
@@ -29,6 +32,7 @@ export function evaluateSentence(sentence: string, suggestion: UpgradeSuggestion
   if (!hasBasicSentenceStructure(normalized)) {
     return {
       correct: false,
+      outcome: 'review',
       feedback: `"${suggestion.selectedWord}" is present, but the sentence needs a clearer subject and verb.`,
     };
   }
@@ -37,12 +41,14 @@ export function evaluateSentence(sentence: string, suggestion: UpgradeSuggestion
   if (semanticIssue) {
     return {
       correct: false,
-      feedback: semanticIssue,
+      outcome: semanticIssue.outcome,
+      feedback: semanticIssue.message,
     };
   }
 
   return {
     correct: true,
+    outcome: 'mastered',
     feedback: `"${suggestion.selectedWord}" fits naturally here. Nice precision without sounding forced.`,
   };
 }
@@ -52,13 +58,14 @@ function escapeRegExp(value: string) {
 }
 
 function hasBasicSentenceStructure(sentence: string) {
-  const hasSubject = /\b(i|we|you|he|she|they|the|my|our|her|his|their|a|an)\b/.test(sentence);
+  const linkingVerb = '(am|are|is|was|were|felt|feel|feels|made|makes|became|becomes|seemed|seems|had|has|have|gave|gives|showed|shows|required|requires|connected|helped|helps|needed|needs)';
+  const hasSubject = /\b(i|we|you|he|she|they|the|my|our|her|his|their|a|an|everyone|people)\b/.test(sentence) || new RegExp(`\\b[a-z]+\\s+${linkingVerb}\\b`).test(sentence);
   const hasVerb = /\b(am|are|is|was|were|be|been|being|felt|feel|feels|made|makes|became|becomes|seemed|seems|had|has|have|gave|gives|showed|shows|required|requires|connected|helped|helps|needed|needs)\b/.test(sentence);
   return hasSubject && hasVerb;
 }
 
 function validateWordSemantics(sentence: string, selectedWord: string) {
-  const validators: Record<string, (sentence: string) => string | null> = {
+  const validators: Record<string, (sentence: string) => SemanticIssue> = {
     compelling: validateCompelling,
     effective: validateCompelling,
     delighted: validateDelighted,
@@ -80,28 +87,32 @@ function validateWordSemantics(sentence: string, selectedWord: string) {
 }
 
 function validateDelighted(sentence: string) {
-  if (hasIncorrectSubject(sentence, ['project', 'presentation', 'update', 'report', 'document', 'spreadsheet', 'timeline', 'plan', 'process', 'thing', 'stuff'], ['delighted', 'impressed'])) {
-    return '"delighted" should describe a person or group feeling pleased, not an inanimate object.';
+  if (/\bi\s+delighted\s+\w+/.test(sentence)) {
+    return issue('review', '"delighted" needs a linking verb here, such as "I was delighted."');
   }
 
-  if (!hasPersonFeelingSubject(sentence, ['delighted', 'impressed'])) {
-    return 'Use "delighted" for a person or group, such as "I was delighted" or "the team felt delighted."';
+  if (hasIncorrectSubject(sentence, ['project', 'presentation', 'update', 'report', 'document', 'spreadsheet', 'timeline', 'plan', 'process', 'thing', 'stuff', 'table', 'chair', 'file', 'room'], ['delighted', 'impressed'])) {
+    return issue('review', '"delighted" should describe someone feeling pleased, not an inanimate object.');
   }
 
   if (/\b(delighted|impressed)\s+because\s+it\s+was\s+(blue|green|red|large|small|round|square)\b/.test(sentence)) {
-    return '"delighted" needs an emotional reason, not an unrelated physical description.';
+    return issue('review', '"delighted" needs an emotional reason, not an unrelated physical description.');
   }
 
-  return null;
+  if (hasDelightedLinkingStructure(sentence)) {
+    return null;
+  }
+
+  return issue('almost', 'Almost there: use "delighted" after a clear subject and linking verb, such as "The students were delighted."');
 }
 
 function validateDisappointed(sentence: string) {
   if (hasIncorrectSubject(sentence, ['project', 'presentation', 'update', 'report', 'document', 'spreadsheet', 'timeline', 'plan', 'process'], ['disappointed', 'discouraged'])) {
-    return '"disappointed" should describe a person or group reacting to an unmet expectation.';
+    return issue('review', '"disappointed" should describe a person or group reacting to an unmet expectation.');
   }
 
   if (!hasPersonFeelingSubject(sentence, ['disappointed', 'discouraged'])) {
-    return 'Use "disappointed" for a person or group, such as "I felt disappointed" or "the client was disappointed."';
+    return issue('almost', 'Use "disappointed" for a person or group, such as "I felt disappointed" or "the client was disappointed."');
   }
 
   return null;
@@ -109,11 +120,11 @@ function validateDisappointed(sentence: string) {
 
 function validateCompelling(sentence: string) {
   if (/\b(i|we|she|he|they)\s+(felt|was|were|am|are)\s+(compelling|effective)\b/.test(sentence)) {
-    return '"compelling" usually describes an idea, update, story, or argument, not how a person feels.';
+    return issue('review', '"compelling" usually describes an idea, update, story, or argument, not how a person feels.');
   }
 
   if (/\b(compelling|effective)\s+because\s+it\s+was\s+(blue|green|red|round|square)\b/.test(sentence)) {
-    return '"compelling" needs a reason tied to clarity, evidence, persuasion, or impact.';
+    return issue('review', '"compelling" needs a reason tied to clarity, evidence, persuasion, or impact.');
   }
 
   return null;
@@ -121,7 +132,7 @@ function validateCompelling(sentence: string) {
 
 function validateChallenging(sentence: string) {
   if (/\b(i|we|she|he|they|team|manager|client)\s+(felt|was|were|am|are)\s+(challenging|ineffective)\b/.test(sentence)) {
-    return '"challenging" should describe a task, timeline, situation, or process rather than a person feeling something.';
+    return issue('review', '"challenging" should describe a task, timeline, situation, or process rather than a person feeling something.');
   }
 
   return null;
@@ -129,7 +140,7 @@ function validateChallenging(sentence: string) {
 
 function validateThoughtful(sentence: string) {
   if (hasIncorrectSubject(sentence, ['deadline', 'spreadsheet', 'budget', 'timeline'], ['thoughtful', 'polished'])) {
-    return '"thoughtful" should describe a person, response, action, or feedback that shows care.';
+    return issue('review', '"thoughtful" should describe a person, response, action, or feedback that shows care.');
   }
 
   return null;
@@ -137,7 +148,7 @@ function validateThoughtful(sentence: string) {
 
 function validateDetailPriorityContext(sentence: string) {
   if (/\b(i|we|she|he|they)\s+(felt|was|were|am|are)\s+(detail|priority|context)\b/.test(sentence)) {
-    return 'Use this word as a noun for information, importance, or background, not as a feeling.';
+    return issue('review', 'Use this word as a noun for information, importance, or background, not as a feeling.');
   }
 
   return null;
@@ -145,14 +156,25 @@ function validateDetailPriorityContext(sentence: string) {
 
 function validateEssential(sentence: string) {
   if (/\b(i|we|she|he|they)\s+(felt|was|were|am|are)\s+(essential|critical)\s+(happy|sad|delighted|disappointed)\b/.test(sentence)) {
-    return '"essential" should describe something necessary, not intensify an emotion.';
+    return issue('review', '"essential" should describe something necessary, not intensify an emotion.');
   }
 
   if (/\b(essential|critical)\s+because\s+it\s+was\s+(blue|green|red|round|square)\b/.test(sentence)) {
-    return '"essential" needs a reason tied to necessity or importance.';
+    return issue('review', '"essential" needs a reason tied to necessity or importance.');
   }
 
   return null;
+}
+
+type SemanticIssue = { outcome: 'almost' | 'review'; message: string } | null;
+
+function issue(outcome: 'almost' | 'review', message: string) {
+  return { outcome, message };
+}
+
+function hasDelightedLinkingStructure(sentence: string) {
+  const words = '(delighted|impressed)';
+  return new RegExp(`(^|\\b)(i|we|you|he|she|they|everyone|people|[a-z]+|the\\s+[a-z]+|my\\s+[a-z]+|our\\s+[a-z]+|their\\s+[a-z]+|his\\s+[a-z]+|her\\s+[a-z]+)(\\s+[a-z]+){0,2}\\s+(am|are|is|was|were|felt|feel|feels|seemed|seems|became|becomes)\\s+${words}\\b`).test(sentence);
 }
 
 function hasPersonFeelingSubject(sentence: string, words: string[]) {

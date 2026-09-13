@@ -521,6 +521,11 @@ textarea:focus {
   border-color: #b9dfc8;
 }
 
+.feedback.almost {
+  background: #fffbea;
+  border-color: #eadb96;
+}
+
 .feedback.review {
   background: #fff4ed;
   border-color: #ecc6ad;

@@ -30,6 +30,7 @@ export type LessonAttempt = {
   word: string;
   sentence: string;
   correct: boolean;
+  outcome: 'mastered' | 'almost' | 'review';
   feedback: string;
   timestamp: number;
 };

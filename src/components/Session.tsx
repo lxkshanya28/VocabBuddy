@@ -41,6 +41,7 @@ export function Session({ profile, onProfileChange, onComplete }: Props) {
       word: current.selectedWord,
       sentence,
       correct: result.correct,
+      outcome: result.outcome,
       feedback: result.feedback,
       timestamp: Date.now(),
     };
