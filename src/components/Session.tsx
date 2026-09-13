@@ -94,7 +94,7 @@ export function Session({ profile, onProfileChange, onComplete }: Props) {
         <WordCard suggestion={current} />
         <VoiceInput
           label={`Use "${current.selectedWord}" in a new sentence`}
-          placeholder={`Example: The project update felt ${current.selectedWord} because...`}
+          placeholder={current.placeholderExample || `Example: Use ${current.selectedWord} in a clear sentence.`}
           value={sentence}
           onChange={setSentence}
           coachingText={`${current.selectedWord}. ${current.meaning}. ${current.example}`}
@@ -121,6 +121,7 @@ export function Session({ profile, onProfileChange, onComplete }: Props) {
             You used "{current.originalPhrase}" in your diagnostic. This lesson practices "{current.selectedWord}" as a
             sharper alternative.
           </p>
+          <p className="muted">{current.practicePrompt}</p>
         </div>
       </aside>
     </section>

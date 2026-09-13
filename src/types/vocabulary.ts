@@ -3,12 +3,18 @@ export type VocabularyCategory = 'Professional' | 'Academic' | 'Everyday' | 'Exp
 export type UpgradeSuggestion = {
   id: string;
   originalPhrase: string;
+  detectedPhrase: string;
   recommendedWords: string[];
   selectedWord: string;
   category: VocabularyCategory;
   meaning: string;
   pronunciation: string;
   example: string;
+  validUsagePatterns: string[];
+  expectedSubjectTypes: string[];
+  commonIncorrectPatterns: string[];
+  practicePrompt: string;
+  placeholderExample: string;
 };
 
 export type TranscriptAnalysis = {

@@ -1,4 +1,5 @@
 import { ArrowLeft, Play } from 'lucide-react';
+import { canSafelyReplace } from '../services/transcriptAnalyzer';
 import { LearnerProfile } from '../types/vocabulary';
 
 type Props = {
@@ -11,8 +12,33 @@ export function SpeechUpgrade({ profile, onPracticeMore, onDashboard }: Props) {
   const analysis = profile.analysis;
   const mastered = profile.masteredWords;
   const review = profile.reviewWords;
+  const hasEvaluatedWords = profile.history.length > 0;
   const upgradedCount = analysis?.suggestions.filter((item) => mastered.includes(item.selectedWord)).length ?? 0;
   const after = buildAfterText(profile);
+
+  if (!hasEvaluatedWords) {
+    return (
+      <section className="screen upgrade-layout">
+        <div className="hero-panel compact-hero">
+          <div className="eyebrow">Speech Upgrade</div>
+          <h1>Practice one word to unlock your before-and-after upgrade.</h1>
+          <p className="lede">
+            VocabBuddy will compare your original transcript with mastered vocabulary after at least one evaluated sentence.
+          </p>
+        </div>
+        <div className="action-row">
+          <button className="secondary-button" type="button" onClick={onDashboard}>
+            <ArrowLeft size={17} />
+            Dashboard
+          </button>
+          <button className="primary-button" type="button" onClick={onPracticeMore}>
+            <Play size={18} />
+            Practice words
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="screen upgrade-layout">
@@ -67,7 +93,9 @@ function buildAfterText(profile: LearnerProfile) {
 
   return profile.analysis.suggestions.reduce((draft, suggestion) => {
     if (!profile.masteredWords.includes(suggestion.selectedWord)) return draft;
-    const phrase = suggestion.originalPhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const detectedPhrase = suggestion.detectedPhrase || suggestion.originalPhrase;
+    if (!canSafelyReplace(detectedPhrase, suggestion.selectedWord)) return draft;
+    const phrase = detectedPhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return draft.replace(new RegExp(`\\b${phrase}\\b`, 'i'), suggestion.selectedWord);
   }, profile.analysis.originalTranscript);
 }

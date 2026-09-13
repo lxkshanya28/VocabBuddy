@@ -29,8 +29,8 @@ export function Dashboard({ profile, accuracy, onStart, onUpgrade }: Props) {
               <Play size={18} />
               Start session
             </button>
-            <button className="secondary-button" type="button" onClick={onUpgrade}>
-              Speech Upgrade
+            <button className="secondary-button" type="button" disabled={profile.history.length === 0} onClick={onUpgrade}>
+              {profile.history.length > 0 ? 'Speech Upgrade' : 'Speech Upgrade locked'}
               <ArrowRight size={17} />
             </button>
           </div>
@@ -59,6 +59,7 @@ export function Dashboard({ profile, accuracy, onStart, onUpgrade }: Props) {
       <aside className="dashboard-side">
         <div className="section-block">
           <h2>Vocabulary DNA</h2>
+          <p className="muted dna-note">Prototype estimates derived from transcript signals and practice results.</p>
           <VocabularyDNA dna={profile.dna} />
         </div>
         <RecentWords history={profile.history} />

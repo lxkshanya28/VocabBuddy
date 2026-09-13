@@ -24,6 +24,11 @@ export function WordCard({ suggestion }: Props) {
       <p className="pronunciation">{suggestion.pronunciation}</p>
       <p>{suggestion.meaning}</p>
       <div className="example-box">{suggestion.example}</div>
+      <div className="usage-list">
+        {(suggestion.validUsagePatterns ?? []).map((pattern) => (
+          <span key={pattern}>{pattern}</span>
+        ))}
+      </div>
       <div className="upgrade-row inline">
         <span>{suggestion.originalPhrase}</span>
         <strong>{suggestion.recommendedWords.join(' / ')}</strong>

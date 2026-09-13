@@ -14,7 +14,7 @@ export function VocabularyDNA({ dna, compact = false }: Props) {
         <div className="dna-row" key={category}>
           <div className="dna-label">
             <span>{category}</span>
-            <strong>{dna[category]}%</strong>
+            <strong>{getLevel(dna[category])}</strong>
           </div>
           <div className="meter">
             <span style={{ width: `${dna[category]}%` }} />
@@ -23,4 +23,10 @@ export function VocabularyDNA({ dna, compact = false }: Props) {
       ))}
     </div>
   );
+}
+
+function getLevel(score: number) {
+  if (score < 45) return 'Priority area';
+  if (score < 70) return 'Developing';
+  return 'Strong';
 }
